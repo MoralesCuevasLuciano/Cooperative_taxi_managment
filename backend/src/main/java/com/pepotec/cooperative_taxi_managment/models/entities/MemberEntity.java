@@ -5,6 +5,7 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotNull;
@@ -24,6 +25,7 @@ import jakarta.persistence.CascadeType;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(callSuper = false)
 public class MemberEntity extends PersonEntity {
 
     @Column(name = "join_date", nullable = false)
@@ -35,6 +37,7 @@ public class MemberEntity extends PersonEntity {
     @Column(name = "leave_date")
     @PastOrPresent(message = "The leave date cannot be in the future")
     @DateTimeFormat(pattern = "dd/MM/yyyy")
+    @Builder.Default
     private LocalDate leaveDate = null;
 
     @Column(name = "role", nullable = false)

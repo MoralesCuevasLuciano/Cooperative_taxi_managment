@@ -13,10 +13,6 @@ import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.FetchType;
-import java.util.List;
 
 @Entity
 @Table(name = "addresses")
@@ -58,7 +54,4 @@ public class AddressEntity {
     @Column(name = "apartment")
     @Size(min = 1, max = 5, message = "The apartment must be between 1 and 5 characters")
     private String apartment;
-
-    @OneToMany(mappedBy = "address", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<MemberEntity> members;
 }

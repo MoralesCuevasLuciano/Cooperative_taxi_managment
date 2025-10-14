@@ -5,11 +5,10 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.ArrayList;
 import jakarta.persistence.CollectionTable;
@@ -21,6 +20,7 @@ import jakarta.persistence.JoinColumn;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(callSuper = false)
 public class SubscriberEntity extends PersonEntity {
 
     @ElementCollection
@@ -29,5 +29,6 @@ public class SubscriberEntity extends PersonEntity {
         joinColumns = @JoinColumn(name = "id_subscriber")
     )
     @Column(name = "licence_number")
+    @Builder.Default
     private List<String> licenceNumbers = new ArrayList<>();
 }

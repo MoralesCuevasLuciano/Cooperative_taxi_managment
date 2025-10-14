@@ -4,8 +4,11 @@ import org.springframework.stereotype.Service;
 import com.pepotec.cooperative_taxi_managment.models.dto.MemberDTO;
 import com.pepotec.cooperative_taxi_managment.models.entities.MemberEntity;
 import com.pepotec.cooperative_taxi_managment.repositories.MemberRepository;
+import com.pepotec.cooperative_taxi_managment.validators.MemberValidator;
+import com.pepotec.cooperative_taxi_managment.exceptions.ResourceNotFoundException;
+import com.pepotec.cooperative_taxi_managment.exceptions.MemberAlreadyInactiveException;
+import com.pepotec.cooperative_taxi_managment.exceptions.InvalidDataException;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.util.Optional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,8 +19,16 @@ public class MemberService {
     private MemberRepository memberRepository;
     @Autowired
     private AddressService addressService;
+    @Autowired
+    private MemberValidator memberValidator;
     
     public MemberDTO createMember(MemberDTO member) {
+        // Validar datos del miembro
+        memberValidator.validateMemberData(member);
+        
+        // Validar campos únicos (DNI, CUIT, Email)
+        memberValidator.validateUniqueFields(member, null);
+        
         MemberEntity memberSaved = convertToEntity(member);
         if(memberSaved.getJoinDate() == null) {
             memberSaved.setJoinDate(LocalDate.now());
@@ -26,11 +37,19 @@ public class MemberService {
     }
 
     public MemberDTO getMemberById(Long id) {
-        return convertToDTO(memberRepository.findById(id).orElse(null));
+        MemberEntity member = memberRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(id, "Miembro"));
+        return convertToDTO(member);
     }
 
     public MemberDTO getMemberByDni(String dni) {
-        return convertToDTO(memberRepository.findByDniAndLeaveDateIsNull(dni).orElse(null));
+        if (dni == null || dni.trim().isEmpty()) {
+            throw new InvalidDataException("El DNI no puede estar vacío");
+        }
+        
+        MemberEntity member = memberRepository.findByDniAndLeaveDateIsNull(dni)
+            .orElseThrow(() -> new ResourceNotFoundException(null, "Miembro con DNI " + dni));
+        return convertToDTO(member);
     }
 
     public List<MemberDTO> getAllMembers() {
@@ -42,10 +61,23 @@ public class MemberService {
     }
 
     public MemberDTO updateMember(MemberDTO member) {
-        MemberEntity memberSaved = memberRepository.findById(member.getId()).orElse(null);
-        if(memberSaved == null) {
-            throw new RuntimeException("Member not found");
+        // Validar que el ID no sea nulo
+        if (member.getId() == null) {
+            throw new InvalidDataException("El ID no puede ser nulo para actualizar");
         }
+        
+        // Buscar el miembro existente
+        MemberEntity memberSaved = memberRepository.findById(member.getId())
+            .orElseThrow(() -> new ResourceNotFoundException(member.getId(), "Miembro"));
+        
+        // Validar los datos del miembro
+        memberValidator.validateMemberData(member);
+        
+        // Validar campos únicos (excluyendo el ID actual)
+        memberValidator.validateUniqueFields(member, member.getId());
+
+        
+        // Actualizar campos
         memberSaved.setFirstName(member.getFirstName());
         memberSaved.setSecondName(member.getSecondName());
         memberSaved.setFatherSurname(member.getFatherSurname());
@@ -59,35 +91,68 @@ public class MemberService {
         memberSaved.setJoinDate(member.getJoinDate());
         memberSaved.setLeaveDate(member.getLeaveDate());
         memberSaved.setRole(member.getRole());
+        
         return convertToDTO(memberRepository.save(memberSaved));
     }
 
     public void deleteMember(Long id) {
         if(id == null) {
-            throw new RuntimeException("Id cannot be null");
+            throw new InvalidDataException("El ID no puede ser nulo");
         }
 
-        MemberEntity memberSaved = memberRepository.findById(id).orElse(null);
-        if(memberSaved == null) {
-            throw new RuntimeException("Member not found");
+        MemberEntity memberSaved = memberRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(id, "Miembro"));
+        
+        // Verificar que no esté ya inactivo
+        if (memberSaved.getLeaveDate() != null) {
+            throw new MemberAlreadyInactiveException(id);
         }
+        
         memberSaved.setLeaveDate(LocalDate.now());
+        memberRepository.save(memberSaved);
+    }
+
+    public void deleteMember(Long id, LocalDate leaveDate) {
+        if(id == null) {
+            throw new InvalidDataException("El ID no puede ser nulo");
+        }
+
+        MemberEntity memberSaved = memberRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException(id, "Miembro"));
+        
+        // Verificar que no esté ya inactivo
+        if (memberSaved.getLeaveDate() != null) {
+            throw new MemberAlreadyInactiveException(id);
+        }
+        
+        memberSaved.setLeaveDate(leaveDate);
         memberRepository.save(memberSaved);
     }
     
     public void deleteMember(MemberDTO member) {
         if(member.getLeaveDate() != null) {
-            throw new RuntimeException("Member is not active");
+            throw new MemberAlreadyInactiveException(member.getId());
         }
-        MemberEntity memberSaved = memberRepository.findById(member.getId()).orElse(null);
-        if(memberSaved == null) {
-            throw new RuntimeException("Member not found");
-        }
+        
+        MemberEntity memberSaved = memberRepository.findById(member.getId())
+            .orElseThrow(() -> new ResourceNotFoundException(member.getId(), "Miembro"));
+        
         memberSaved.setLeaveDate(LocalDate.now());
+        memberRepository.save(memberSaved);
+    }    
+
+    public void deleteMember(MemberDTO member, LocalDate leaveDate) {
+        if(member.getLeaveDate() != null) {
+            throw new MemberAlreadyInactiveException(member.getId());
+        }
+        
+        MemberEntity memberSaved = memberRepository.findById(member.getId())
+            .orElseThrow(() -> new ResourceNotFoundException(member.getId(), "Miembro"));
+        
+        memberSaved.setLeaveDate(leaveDate);
         memberRepository.save(memberSaved);
     }
 
-    
     private MemberEntity convertToEntity(MemberDTO member) {
         MemberEntity memberEntity = new MemberEntity();
         memberEntity.setFirstName(member.getFirstName());
@@ -107,6 +172,10 @@ public class MemberService {
     }
 
     private MemberDTO convertToDTO(MemberEntity member) {
+        if (member == null) {
+            return null;
+        }
+        
         MemberDTO memberDTO = new MemberDTO();
         memberDTO.setId(member.getId());
         memberDTO.setFirstName(member.getFirstName());
