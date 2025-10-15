@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.ArrayList;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.JoinColumn;
+import jakarta.validation.constraints.Pattern;
 
 @Entity
 @Table(name = "subscribers")
@@ -20,7 +21,7 @@ import jakarta.persistence.JoinColumn;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 public class SubscriberEntity extends PersonEntity {
 
     @ElementCollection
@@ -30,5 +31,5 @@ public class SubscriberEntity extends PersonEntity {
     )
     @Column(name = "licence_number")
     @Builder.Default
-    private List<String> licenceNumbers = new ArrayList<>();
+    private List<@Pattern(regexp = "^\\d{4}$", message = "Each licence number must have exactly 4 digits") String> licenceNumbers = new ArrayList<>();
 }

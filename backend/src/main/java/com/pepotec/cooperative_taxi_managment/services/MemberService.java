@@ -5,6 +5,7 @@ import com.pepotec.cooperative_taxi_managment.models.dto.MemberDTO;
 import com.pepotec.cooperative_taxi_managment.models.entities.MemberEntity;
 import com.pepotec.cooperative_taxi_managment.repositories.MemberRepository;
 import com.pepotec.cooperative_taxi_managment.validators.MemberValidator;
+import com.pepotec.cooperative_taxi_managment.validators.PersonValidator;
 import com.pepotec.cooperative_taxi_managment.exceptions.ResourceNotFoundException;
 import com.pepotec.cooperative_taxi_managment.exceptions.MemberAlreadyInactiveException;
 import com.pepotec.cooperative_taxi_managment.exceptions.InvalidDataException;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.pepotec.cooperative_taxi_managment.validators.AddressValidator;
 
 @Service
 public class MemberService {
@@ -22,9 +24,21 @@ public class MemberService {
     @Autowired
     private MemberValidator memberValidator;
     
+    @Autowired
+    private PersonValidator personValidator;
+    
+    @Autowired
+    private AddressValidator addressValidator;
+    
     public MemberDTO createMember(MemberDTO member) {
-        // Validar datos del miembro
-        memberValidator.validateMemberData(member);
+        // Validar datos básicos de Person
+        personValidator.validatePersonData(member);
+
+        // Validar dirección
+        addressValidator.validateAddress(member.getAddress());
+        
+        // Validar campos específicos de Member
+        memberValidator.validateMemberSpecificFields(member);
         
         // Validar campos únicos (DNI, CUIT, Email)
         memberValidator.validateUniqueFields(member, null);
@@ -70,8 +84,14 @@ public class MemberService {
         MemberEntity memberSaved = memberRepository.findById(member.getId())
             .orElseThrow(() -> new ResourceNotFoundException(member.getId(), "Miembro"));
         
-        // Validar los datos del miembro
-        memberValidator.validateMemberData(member);
+        // Validar datos básicos de Person
+        personValidator.validatePersonData(member);
+        
+        // Validar campos específicos de Member
+        memberValidator.validateMemberSpecificFields(member);
+
+        // Validar dirección
+        addressValidator.validateAddress(member.getAddress());
         
         // Validar campos únicos (excluyendo el ID actual)
         memberValidator.validateUniqueFields(member, member.getId());

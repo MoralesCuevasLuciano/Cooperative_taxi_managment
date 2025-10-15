@@ -3,6 +3,7 @@ package com.pepotec.cooperative_taxi_managment.models.entities;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,13 +20,14 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.CascadeType;
 
+
 @Entity
 @Table(name = "members")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@EqualsAndHashCode(callSuper = false)
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
 public class MemberEntity extends PersonEntity {
 
     @Column(name = "join_date", nullable = false)
